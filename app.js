@@ -49,6 +49,7 @@ const REWARD_ROLL_LINES = [
 ];
 
 const GOLD_COINS_ID = 'gold-coins';
+const BACKPACK_EXCLUDED_IDS = new Set(['backpack', 'gold-piece']);
 const REWARD_RARE_IDS = new Set(['genie-lamp', 'time']);
 const REWARD_ROLL_DURATION_MS = 2200;
 
@@ -304,17 +305,6 @@ const DEFAULT_CATALOG = [
     quantity: 0,
   },
   {
-    id: 'gold-piece',
-    name: 'Gold Piece',
-    description: 'A single minted coin, useful as a small currency reward.',
-    icon: 'assets/icons/gold_piece.png',
-    sound: 'assets/sounds/magic.mp3',
-    useVerb: 'Spend',
-    successMessage: 'You spend a Gold Piece in a quick trade.',
-    violationMessage: 'You tried to spend a Gold Piece you had not earned. The Journal records the debt.',
-    quantity: 0,
-  },
-  {
     id: 'genie-lamp',
     name: 'Genie Lamp',
     description: 'An ancient brass lamp humming with trapped power. Use wisely — one wish granted.',
@@ -359,11 +349,13 @@ function mergeCatalogDefaults(loadedState) {
   if (!Array.isArray(normalized.catalog)) {
     normalized.catalog = structuredClone(DEFAULT_CATALOG);
   } else {
-    normalized.catalog = normalized.catalog.map(item => ({
-      ...item,
-      icon: item.id === GOLD_COINS_ID ? 'assets/icons/gold_coins.png' : item.icon,
-      quantity: Math.max(0, parseInt(item.quantity, 10) || 0),
-    }));
+    normalized.catalog = normalized.catalog
+      .filter(item => item && item.id && !BACKPACK_EXCLUDED_IDS.has(item.id))
+      .map(item => ({
+        ...item,
+        icon: item.id === GOLD_COINS_ID ? 'assets/icons/gold_coins.png' : item.icon,
+        quantity: Math.max(0, parseInt(item.quantity, 10) || 0),
+      }));
 
     const existingIds = new Set(normalized.catalog.map(item => item.id));
     DEFAULT_CATALOG.forEach(defaultItem => {
@@ -714,7 +706,11 @@ function renderBackpack() {
   const grid = document.getElementById('backpack-grid');
   grid.innerHTML = '';
 
-  state.catalog.forEach(item => {
+  const backpackItems = state.catalog.filter(item =>
+    item && item.id && !BACKPACK_EXCLUDED_IDS.has(item.id)
+  );
+
+  backpackItems.forEach(item => {
     const slot = document.createElement('div');
     slot.className = 'item-slot' + (item.quantity === 0 ? ' depleted' : '');
     slot.setAttribute('role', 'button');
