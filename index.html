@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0d0a0e" />
+  <meta name="description" content="Field Companion – inventory companion for the Gamify RPG." />
+  <title>Field Companion</title>
+
+  <!-- PWA manifest -->
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- Apple PWA meta -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Field Companion" />
+  <link rel="apple-touch-icon" href="assets/icons/app-icon-192.png" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <!-- ═══════════════════════════════════════════
+       APP SHELL
+  ═══════════════════════════════════════════ -->
+  <div id="app">
+
+    <!-- Top bar -->
+    <header id="top-bar">
+      <span id="top-bar-title">Field Companion</span>
+      <div id="top-bar-actions">
+        <button id="btn-export" class="icon-btn" title="Export backup">&#x1F4BE;</button>
+        <button id="btn-import-trigger" class="icon-btn" title="Import backup">&#x1F4C2;</button>
+        <input type="file" id="import-file-input" accept=".json" style="display:none" />
+      </div>
+    </header>
+
+    <!-- Screen container -->
+    <main id="screen-container">
+
+      <!-- ── SCREEN: BACKPACK ── -->
+      <section id="screen-backpack" class="screen active">
+        <h2 class="screen-title">Backpack</h2>
+        <div id="backpack-toolbar">
+          <button id="btn-reward-myself" class="action-btn reward-action-btn">&#x1F451; Reward Myself</button>
+        </div>
+        <div id="backpack-grid" class="item-grid">
+          <!-- Item slots are injected by app.js -->
+        </div>
+      </section>
+
+      <!-- ── SCREEN: JOURNAL ── -->
+      <section id="screen-journal" class="screen">
+        <h2 class="screen-title">Journal</h2>
+        <div id="journal-toolbar">
+          <button id="btn-log-fight" class="action-btn fight-action-btn">⚔ Log Fight</button>
+        </div>
+        <div id="journal-filters">
+          <button class="filter-btn active" data-filter="open">Open</button>
+          <button class="filter-btn" data-filter="all">All</button>
+        </div>
+        <ul id="journal-list" class="journal-list">
+          <!-- Journal entries injected by app.js -->
+        </ul>
+      </section>
+
+      <!-- ── SCREEN: CATALOG / MANAGE ── -->
+      <section id="screen-catalog" class="screen">
+        <h2 class="screen-title">Catalog</h2>
+        <div id="catalog-toolbar">
+          <button id="btn-new-item" class="action-btn">+ New Item</button>
+        </div>
+        <ul id="catalog-list" class="catalog-list">
+          <!-- Catalog rows injected by app.js -->
+        </ul>
+      </section>
+
+    </main>
+
+    <!-- Bottom navigation -->
+    <nav id="bottom-nav">
+      <button class="nav-btn active" data-screen="backpack">
+        <span class="nav-icon nav-icon-image-wrap">
+          <img src="assets/icons/inventory.png" alt="Inventory" class="nav-icon-image" />
+        </span>
+        <span class="nav-label">Backpack</span>
+      </button>
+      <button class="nav-btn" data-screen="journal">
+        <span class="nav-icon nav-icon-image-wrap">
+          <img src="assets/icons/journal.png" alt="Journal" class="nav-icon-image" />
+        </span>
+        <span class="nav-label">Journal</span>
+      </button>
+      <button class="nav-btn" data-screen="catalog">
+        <span class="nav-icon">&#x2699;&#xFE0F;</span>
+        <span class="nav-label">Catalog</span>
+      </button>
+    </nav>
+
+  </div><!-- /#app -->
+
+
+  <!-- ═══════════════════════════════════════════
+       MODAL: ITEM USE
+  ═══════════════════════════════════════════ -->
+  <div id="item-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <button class="modal-close" id="item-modal-close" aria-label="Close">&#x2715;</button>
+      <div class="modal-icon-wrap">
+        <img id="item-modal-icon" src="" alt="" class="modal-icon" />
+      </div>
+      <h3 id="item-modal-name" class="modal-title"></h3>
+      <p id="item-modal-desc" class="modal-desc"></p>
+      <p class="modal-qty-label">Quantity: <strong id="item-modal-qty"></strong></p>
+      <button id="item-modal-use-btn" class="use-btn"></button>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════
+       MODAL: RESULT POPUP (success / violation)
+  ═══════════════════════════════════════════ -->
+  <div id="result-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card result-card">
+      <div id="result-modal-icon-wrap" class="result-icon-wrap"></div>
+      <p id="result-modal-message" class="result-message"></p>
+      <button id="result-modal-ok" class="use-btn">OK</button>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════
+       MODAL: ITEM EDITOR (Catalog)
+  ═══════════════════════════════════════════ -->
+  <div id="editor-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card editor-card">
+      <button class="modal-close" id="editor-modal-close" aria-label="Close">&#x2715;</button>
+      <h3 id="editor-modal-title" class="modal-title">Edit Item</h3>
+
+      <form id="editor-form" autocomplete="off">
+        <label class="form-label">Name
+          <input type="text" id="ef-name" class="form-input" required />
+        </label>
+        <label class="form-label">Description
+          <textarea id="ef-desc" class="form-input form-textarea" rows="3"></textarea>
+        </label>
+        <label class="form-label">Icon path
+          <input type="text" id="ef-icon" class="form-input" placeholder="assets/icons/item.png" />
+        </label>
+        <label class="form-label">Sound path
+          <input type="text" id="ef-sound" class="form-input" placeholder="assets/sounds/item.mp3" />
+        </label>
+        <label class="form-label">Use verb (e.g. Drink, Use, Open)
+          <input type="text" id="ef-verb" class="form-input" placeholder="Use" />
+        </label>
+        <label class="form-label">Success message
+          <input type="text" id="ef-success" class="form-input" />
+        </label>
+        <label class="form-label">Violation message
+          <input type="text" id="ef-violation" class="form-input" />
+        </label>
+        <label class="form-label">Quantity
+          <input type="number" id="ef-qty" class="form-input" min="0" value="0" />
+        </label>
+        <div class="editor-actions">
+          <button type="submit" class="use-btn">Save</button>
+          <button type="button" id="editor-delete-btn" class="use-btn danger-btn">Delete</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODAL: FIGHT LOG
+  ═══════════════════════════════════════════════════════════════ -->
+  <div id="fight-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card fight-card">
+      <button class="modal-close" id="fight-modal-close" aria-label="Close">&#x2715;</button>
+      <h3 class="modal-title fight-modal-title">⚔ Log a Fight</h3>
+      <p class="modal-desc">Record a battle against a bad-habit monster while you were away.</p>
+
+      <!-- Step 1: pick creature -->
+      <div id="fight-step-creature" class="fight-step">
+        <p class="fight-step-label">Choose your enemy</p>
+        <div class="fight-creature-grid">
+          <button class="creature-card" data-key="easy">
+            <span class="creature-emoji">👺</span>
+            <span class="creature-name">Common Goblin</span>
+            <span class="creature-diff diff-easy">Easy</span>
+          </button>
+          <button class="creature-card" data-key="medium">
+            <span class="creature-emoji">👹</span>
+            <span class="creature-name">Common Troll</span>
+            <span class="creature-diff diff-medium">Medium</span>
+          </button>
+          <button class="creature-card" data-key="hard">
+            <span class="creature-emoji">🐉</span>
+            <span class="creature-name">Common Dragon</span>
+            <span class="creature-diff diff-hard">Hard</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: outcome + notes (hidden until creature selected) -->
+      <div id="fight-step-outcome" class="fight-step hidden">
+        <p class="fight-step-label">
+          You faced the <strong id="fight-chosen-name"></strong>.
+        </p>
+        <div class="fight-outcome-row">
+          <button class="outcome-btn victory-btn" data-outcome="victory">
+            <span>🏆</span> Victory
+          </button>
+          <button class="outcome-btn defeat-btn" data-outcome="defeat">
+            <span>💀</span> Defeat
+          </button>
+        </div>
+        <label class="form-label fight-notes-label">Notes (optional)
+          <textarea id="fight-notes" class="form-input form-textarea" rows="3"
+            placeholder="What temptation did you face? How did the battle unfold?"></textarea>
+        </label>
+        <button id="fight-submit-btn" class="use-btn" disabled>Record in Journal</button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODAL: REWARD MYSELF
+  ═══════════════════════════════════════════════════════════════ -->
+  <div id="reward-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card reward-card" id="reward-card">
+      <button class="modal-close" id="reward-modal-close" aria-label="Close">&#x2715;</button>
+      <h3 class="modal-title">Mystic Reward Chest</h3>
+      <p class="modal-desc">Let the runes decide your earned reward.</p>
+
+      <div class="chest-stage" id="chest-stage">
+        <div class="rune-ring" aria-hidden="true">&#x2727; &#x16A0; &#x16CB; &#x16A6; &#x16B1; &#x2727;</div>
+        <div class="reward-chest" id="reward-chest" role="img" aria-label="Treasure chest">&#x1F381;</div>
+        <div class="spark-layer" id="spark-layer" aria-hidden="true"></div>
+      </div>
+
+      <p id="reward-reel-text" class="reward-reel-text">Ready to roll the chest.</p>
+
+      <ul id="reward-reveal-list" class="reward-reveal-list"></ul>
+
+      <div class="reward-actions">
+        <button id="reward-roll-btn" class="use-btn">Roll Reward</button>
+        <button id="reward-claim-btn" class="action-btn reward-claim-btn hidden">Claim Rewards</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="app.js"></script>
+</body>
+</html>
